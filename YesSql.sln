@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27130.2010
+VisualStudioVersion = 15.0.27130.2020
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{0882456B-4A70-4895-A3AE-39B9D30A1B31}"
 EndProject
@@ -42,11 +42,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YesSql.Provider.Sqlite", "s
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YesSql.Provider.PostgreSql", "src\YesSql.Provider.PostgreSql\YesSql.Provider.PostgreSql.csproj", "{ACC28167-D2C3-426A-9C45-C4906E09BA4E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YesSql.Provider.Oracle", "YesSql.Provider.Oracle\YesSql.Provider.Oracle.csproj", "{148E7977-E546-4C39-B346-7C0CA555E86E}"
-	ProjectSection(ProjectDependencies) = postProject
-		{A69B2298-1840-46E8-849E-CA68C96364EE} = {A69B2298-1840-46E8-849E-CA68C96364EE}
-		{B6DCACD9-AA54-475D-A91B-634330207138} = {B6DCACD9-AA54-475D-A91B-634330207138}
-	EndProjectSection
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YesSql.Provider.Oracle", "src\YesSql.Provider.Oracle\YesSql.Provider.Oracle.csproj", "{1C543F66-C8B0-465A-A68D-FC7252A01F8F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -268,22 +264,22 @@ Global
 		{ACC28167-D2C3-426A-9C45-C4906E09BA4E}.Release|x64.Build.0 = Release|Any CPU
 		{ACC28167-D2C3-426A-9C45-C4906E09BA4E}.Release|x86.ActiveCfg = Release|Any CPU
 		{ACC28167-D2C3-426A-9C45-C4906E09BA4E}.Release|x86.Build.0 = Release|Any CPU
-		{148E7977-E546-4C39-B346-7C0CA555E86E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{148E7977-E546-4C39-B346-7C0CA555E86E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{148E7977-E546-4C39-B346-7C0CA555E86E}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{148E7977-E546-4C39-B346-7C0CA555E86E}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{148E7977-E546-4C39-B346-7C0CA555E86E}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{148E7977-E546-4C39-B346-7C0CA555E86E}.Debug|x64.Build.0 = Debug|Any CPU
-		{148E7977-E546-4C39-B346-7C0CA555E86E}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{148E7977-E546-4C39-B346-7C0CA555E86E}.Debug|x86.Build.0 = Debug|Any CPU
-		{148E7977-E546-4C39-B346-7C0CA555E86E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{148E7977-E546-4C39-B346-7C0CA555E86E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{148E7977-E546-4C39-B346-7C0CA555E86E}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{148E7977-E546-4C39-B346-7C0CA555E86E}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{148E7977-E546-4C39-B346-7C0CA555E86E}.Release|x64.ActiveCfg = Release|Any CPU
-		{148E7977-E546-4C39-B346-7C0CA555E86E}.Release|x64.Build.0 = Release|Any CPU
-		{148E7977-E546-4C39-B346-7C0CA555E86E}.Release|x86.ActiveCfg = Release|Any CPU
-		{148E7977-E546-4C39-B346-7C0CA555E86E}.Release|x86.Build.0 = Release|Any CPU
+		{1C543F66-C8B0-465A-A68D-FC7252A01F8F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1C543F66-C8B0-465A-A68D-FC7252A01F8F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1C543F66-C8B0-465A-A68D-FC7252A01F8F}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{1C543F66-C8B0-465A-A68D-FC7252A01F8F}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{1C543F66-C8B0-465A-A68D-FC7252A01F8F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{1C543F66-C8B0-465A-A68D-FC7252A01F8F}.Debug|x64.Build.0 = Debug|Any CPU
+		{1C543F66-C8B0-465A-A68D-FC7252A01F8F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1C543F66-C8B0-465A-A68D-FC7252A01F8F}.Debug|x86.Build.0 = Debug|Any CPU
+		{1C543F66-C8B0-465A-A68D-FC7252A01F8F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1C543F66-C8B0-465A-A68D-FC7252A01F8F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1C543F66-C8B0-465A-A68D-FC7252A01F8F}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{1C543F66-C8B0-465A-A68D-FC7252A01F8F}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{1C543F66-C8B0-465A-A68D-FC7252A01F8F}.Release|x64.ActiveCfg = Release|Any CPU
+		{1C543F66-C8B0-465A-A68D-FC7252A01F8F}.Release|x64.Build.0 = Release|Any CPU
+		{1C543F66-C8B0-465A-A68D-FC7252A01F8F}.Release|x86.ActiveCfg = Release|Any CPU
+		{1C543F66-C8B0-465A-A68D-FC7252A01F8F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -302,7 +298,7 @@ Global
 		{C5627926-D605-4F27-8324-F85862D22B05} = {0C294EC4-E6EF-4839-AD34-335C1A5112F9}
 		{5668D506-DA4C-4910-A4A5-4A3C3DC4576B} = {0C294EC4-E6EF-4839-AD34-335C1A5112F9}
 		{ACC28167-D2C3-426A-9C45-C4906E09BA4E} = {0C294EC4-E6EF-4839-AD34-335C1A5112F9}
-		{148E7977-E546-4C39-B346-7C0CA555E86E} = {0C294EC4-E6EF-4839-AD34-335C1A5112F9}
+		{1C543F66-C8B0-465A-A68D-FC7252A01F8F} = {0C294EC4-E6EF-4839-AD34-335C1A5112F9}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {2BFE5ABA-406F-449A-AEE9-F82D9B907DA8}
