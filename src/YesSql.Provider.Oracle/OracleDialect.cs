@@ -31,7 +31,7 @@ namespace YesSql.Provider.Oracle
             {DbType.AnsiStringFixedLength, "char(255)"},
             {DbType.AnsiString, "varchar2(255)"},
             {DbType.StringFixedLength, "nchar(255)"},
-            {DbType.String, "nvarchar(255)"},
+            {DbType.String, "nvarchar2(255)"},
             {DbType.Currency, "number"}
         };
 
@@ -105,7 +105,7 @@ namespace YesSql.Provider.Oracle
             return " drop foreign key " + name;
         }
 
-        public override string DefaultValuesInsert => "DEFAULT VALUES";
+        public override string DefaultValuesInsert => "VALUES()";
 
         public override void Page(ISqlBuilder sqlBuilder, int offset, int limit)
         {
@@ -142,9 +142,12 @@ namespace YesSql.Provider.Oracle
             return SingleQuoteString + value.Replace(SingleQuoteString, DoubleSingleQuoteString) + SingleQuoteString;
         }
 
-        public override string CascadeConstraintsString => " cascade ";
+        public override string CascadeConstraintsString => " cascade constraint ";
 
+        public override bool HasDataTypeInIdentityColumn => true;
+        public override bool SupportsIdentityColumns => false;
         public override string IdentitySelectString => throw new NotImplementedException();
+        public override string IdentityColumnString => "int";
 
         public override string GetSqlValue(object value)
         {

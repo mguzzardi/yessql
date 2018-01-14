@@ -1,6 +1,12 @@
 using System;
 using System.Data;
+#if RUN_DOTNET451
 using Oracle.ManagedDataAccess.Client;
+#endif
+#if RUN_NETSTANDARD
+using Devart.Data.Oracle;
+#endif
+
 
 namespace YesSql.Provider.Oracle
 {
@@ -18,7 +24,7 @@ namespace YesSql.Provider.Oracle
             this IConfiguration configuration,
             string connectionString)
         {
-            return UseOracle(configuration, connectionString, IsolationLevel.ReadUncommitted);
+            return UseOracle(configuration, connectionString, IsolationLevel.ReadCommitted);
         }
 
         public static IConfiguration UseOracle(

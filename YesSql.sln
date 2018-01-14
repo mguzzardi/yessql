@@ -21,6 +21,9 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YesSql.Samples.Performance", "samples\YesSql.Samples.Performance\YesSql.Samples.Performance.csproj", "{F2C23E01-C045-4D8E-997F-A9110DA5E041}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YesSql.Tests", "test\YesSql.Tests\YesSql.Tests.csproj", "{2E2082CC-BB43-4971-A419-3F5CE5BD2CD7}"
+	ProjectSection(ProjectDependencies) = postProject
+		{1C543F66-C8B0-465A-A68D-FC7252A01F8F} = {1C543F66-C8B0-465A-A68D-FC7252A01F8F}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YesSql.Bench", "samples\YesSql.Bench\YesSql.Bench.csproj", "{54213D0E-F9D8-4293-AD78-852FC72423F9}"
 EndProject

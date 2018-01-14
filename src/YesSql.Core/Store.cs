@@ -100,9 +100,9 @@ namespace YesSql
                 builder.CreateTable(LinearBlockIdGenerator.TableName, table => table
                     .Column<string>("dimension", column => column.PrimaryKey().NotNull())
                     .Column<ulong>("nextval")
-                )
-                .AlterTable(LinearBlockIdGenerator.TableName, table => table
-                    .CreateIndex("IX_Dimension", "dimension")
+                //)FIXME
+                //.AlterTable(LinearBlockIdGenerator.TableName, table => table
+                //    .CreateIndex("IX_Dimension", "dimension")
                 );
             }
 
