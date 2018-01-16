@@ -100,31 +100,14 @@ namespace YesSql.Provider.Oracle
             throw new Exception("DbType not found for: " + dbType);
         }
 
-        public override string GetDropForeignKeyConstraintString(string name)
-        {
-            return " drop foreign key " + name;
-        }
-
         public override string DefaultValuesInsert => "VALUES()";
 
         public override void Page(ISqlBuilder sqlBuilder, int offset, int limit)
         {
-            var sb = new StringBuilder();
-
-            sb.Append(" rownum <= ");
-
-            if (limit != 0)
+            if (offset != 0 || limit != 0)
             {
-                sb.Append(limit);
+                sqlBuilder.Trail = "OFFSET " + offset + " ROWS FETCH FIRST " + limit + " ROWS ONLY"; //only Oracle 12c
             }
-
-            if (offset != 0)
-            {
-                sb.Append(" rownum > ");
-                sb.Append(offset);
-            }
-
-            sqlBuilder.Trail = sb.ToString();
         }
 
         public override string QuoteForColumnName(string columnName)
@@ -145,9 +128,9 @@ namespace YesSql.Provider.Oracle
         public override string CascadeConstraintsString => " cascade constraint ";
 
         public override bool HasDataTypeInIdentityColumn => true;
-        public override bool SupportsIdentityColumns => false;
-        public override string IdentitySelectString => throw new NotImplementedException();
-        public override string IdentityColumnString => "int";
+        public override bool SupportsIdentityColumns => true;
+        public override string IdentitySelectString => " RETURNING "; //RETURNING {column} into {variable}
+        public override string IdentityColumnString => "NUMBER GENERATED ALWAYS AS IDENTITY"; //only available in Oracle 12c
 
         public override string GetSqlValue(object value)
         {

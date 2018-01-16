@@ -100,7 +100,7 @@ namespace YesSql
                 builder.CreateTable(LinearBlockIdGenerator.TableName, table => table
                     .Column<string>("dimension", column => column.PrimaryKey().NotNull())
                     .Column<ulong>("nextval")
-                //)FIXME
+                //)FIXME : in Oracle it's forbidden to index an already indexed column and PK/UK is already indexed 
                 //.AlterTable(LinearBlockIdGenerator.TableName, table => table
                 //    .CreateIndex("IX_Dimension", "dimension")
                 );
