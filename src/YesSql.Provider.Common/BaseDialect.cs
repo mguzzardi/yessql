@@ -162,5 +162,13 @@ namespace YesSql.Provider
 
             return name + "(" + String.Join(", ", args) +  ")";
         }
+
+        //parameters
+        public virtual string ParameterNamePrefix => "@";
+        public virtual string ParameterPrefix => "";
+        public virtual string StatementEnd => ";";
+
+        public virtual string NullString => String.Empty;
+
     }
 }

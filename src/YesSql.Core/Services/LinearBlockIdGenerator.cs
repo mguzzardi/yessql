@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using YesSql.Sql;
 
@@ -69,11 +69,11 @@ namespace YesSql.Services
                     var transaction = session.Demand();
                     
                     var selectCommand = transaction.Connection.CreateCommand();
-                    selectCommand.CommandText = "SELECT " + _dialect.QuoteForColumnName("nextval") + " FROM " + _dialect.QuoteForTableName(_tablePrefix + TableName) + " WHERE " + _dialect.QuoteForTableName("dimension") + " = @dimension;";
+                    selectCommand.CommandText = "SELECT " + _dialect.QuoteForColumnName("nextval") + " FROM " + _dialect.QuoteForTableName(_tablePrefix + TableName) + " WHERE " + _dialect.QuoteForTableName("dimension") + " = " + _dialect.ParameterPrefix + _dialect.ParameterNamePrefix + "dimension" + _dialect.StatementEnd;
 
                     var selectDimension = selectCommand.CreateParameter();
-                    selectDimension.Value = dimension;
-                    selectDimension.ParameterName = "@dimension";
+                    selectDimension.Value = (dimension == String.Empty ? _dialect.NullString : dimension);
+                    selectDimension.ParameterName = _dialect.ParameterNamePrefix + "dimension";
                     selectCommand.Parameters.Add(selectDimension);
 
                     selectCommand.Transaction = transaction;
@@ -81,21 +81,21 @@ namespace YesSql.Services
                     nextval = Convert.ToInt64(selectCommand.ExecuteScalar());
 
                     var updateCommand = transaction.Connection.CreateCommand();
-                    updateCommand.CommandText = "UPDATE " + _dialect.QuoteForTableName(_tablePrefix + TableName) + " SET " + _dialect.QuoteForColumnName("nextval") + "=@new WHERE " + _dialect.QuoteForColumnName("nextval") + " = @previous AND " + _dialect.QuoteForColumnName("dimension") + " = @dimension;";
+                    updateCommand.CommandText = "UPDATE " + _dialect.QuoteForTableName(_tablePrefix + TableName) + " SET " + _dialect.QuoteForColumnName("nextval") + "=" + _dialect.ParameterPrefix + _dialect.ParameterNamePrefix + "new  WHERE " + _dialect.QuoteForColumnName("nextval") + " = " + _dialect.ParameterPrefix + _dialect.ParameterNamePrefix +"previous AND " + _dialect.QuoteForColumnName("dimension") + " = " + _dialect.ParameterPrefix + _dialect.ParameterNamePrefix + "dimension" + _dialect.StatementEnd;
 
                     var updateDimension = updateCommand.CreateParameter();
-                    updateDimension.Value = dimension;
-                    updateDimension.ParameterName = "@dimension";
+                    updateDimension.Value = (dimension == String.Empty ? _dialect.NullString : dimension);
+                    updateDimension.ParameterName = _dialect.ParameterNamePrefix + "dimension";
                     updateCommand.Parameters.Add(updateDimension);
 
                     var newValue = updateCommand.CreateParameter();
                     newValue.Value = nextval + _range;
-                    newValue.ParameterName = "@new";
+                    newValue.ParameterName = _dialect.ParameterNamePrefix + "new";
                     updateCommand.Parameters.Add(newValue);
 
                     var previousValue = updateCommand.CreateParameter();
                     previousValue.Value = nextval;
-                    previousValue.ParameterName = "@previous";
+                    previousValue.ParameterName = _dialect.ParameterNamePrefix + "previous";
                     updateCommand.Parameters.Add(previousValue);
 
                     updateCommand.Transaction = transaction;
@@ -127,11 +127,11 @@ namespace YesSql.Services
             
             // Does the record already exist?
             var selectCommand = transaction.Connection.CreateCommand();
-            selectCommand.CommandText = "SELECT " + _dialect.QuoteForColumnName("nextval") + " FROM " + _dialect.QuoteForTableName(_tablePrefix + TableName) + " WHERE dimension = @dimension;";
+            selectCommand.CommandText = "SELECT " + _dialect.QuoteForColumnName("nextval") + " FROM " + _dialect.QuoteForTableName(_tablePrefix + TableName) + " WHERE " + _dialect.QuoteForColumnName("dimension") + " = " + _dialect.ParameterPrefix + _dialect.ParameterNamePrefix + "dimension" + _dialect.StatementEnd;
 
             var selectDimension = selectCommand.CreateParameter();
-            selectDimension.Value = dimension;
-            selectDimension.ParameterName = "@dimension";
+            selectDimension.Value = (dimension == String.Empty ? _dialect.NullString : dimension);
+            selectDimension.ParameterName = _dialect.ParameterNamePrefix + "dimension";
             selectCommand.Parameters.Add(selectDimension);
 
             selectCommand.Transaction = transaction;
@@ -144,16 +144,16 @@ namespace YesSql.Services
             }
 
             var command = transaction.Connection.CreateCommand();
-            command.CommandText = "INSERT INTO " + _dialect.QuoteForTableName(_tablePrefix + TableName) + " (" + _dialect.QuoteForColumnName("dimension") + ", " + _dialect.QuoteForColumnName("nextval") + ") VALUES(@dimension, @nextval);";
+            command.CommandText = "INSERT INTO " + _dialect.QuoteForTableName(_tablePrefix + TableName) + " (" + _dialect.QuoteForColumnName("dimension") + ", " + _dialect.QuoteForColumnName("nextval") + ") VALUES(" + _dialect.ParameterPrefix + _dialect.ParameterNamePrefix + "dimension, " + _dialect.ParameterPrefix + _dialect.ParameterNamePrefix + "nextval)" + _dialect.StatementEnd;
 
             var dimensionParameter = command.CreateParameter();
-            dimensionParameter.Value = dimension;
-            dimensionParameter.ParameterName = "@dimension";
+            dimensionParameter.Value = (dimension == String.Empty ? _dialect.NullString : dimension);
+            dimensionParameter.ParameterName = _dialect.ParameterNamePrefix + "dimension";
             command.Parameters.Add(dimensionParameter);
 
             var nextValParameter = command.CreateParameter();
             nextValParameter.Value = 1;
-            nextValParameter.ParameterName = "@nextval";
+            nextValParameter.ParameterName = _dialect.ParameterNamePrefix + "nextval";
             command.Parameters.Add(nextValParameter);
 
             command.Transaction = transaction;

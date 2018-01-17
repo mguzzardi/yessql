@@ -130,7 +130,7 @@ namespace YesSql.Provider.Oracle
         public override bool HasDataTypeInIdentityColumn => true;
         public override bool SupportsIdentityColumns => true;
         public override string IdentitySelectString => " RETURNING "; //RETURNING {column} into {variable}
-        public override string IdentityColumnString => "NUMBER GENERATED ALWAYS AS IDENTITY"; //only available in Oracle 12c
+        public override string IdentityColumnString => " GENERATED ALWAYS AS IDENTITY primary key"; //only available in Oracle 12c
 
         public override string GetSqlValue(object value)
         {
@@ -147,6 +147,11 @@ namespace YesSql.Provider.Oracle
                     return base.GetSqlValue(value);
             }
         }
+
+        public override string NullString => "null";
+        public override string ParameterNamePrefix => "";
+        public override string ParameterPrefix => ":";
+        public override string StatementEnd => "";
 
     }
 }

@@ -29,5 +29,13 @@ namespace YesSql
         void Page(ISqlBuilder sqlBuilder, int offset, int limit);
         ISqlBuilder CreateBuilder(string tablePrefix);
         string RenderMethod(string name, params string[] args);
+
+
+        string ParameterNamePrefix { get; }
+        string ParameterPrefix { get; }
+        string StatementEnd { get; }
+
+
+        string NullString { get; }
     }
 }
