@@ -1,7 +1,8 @@
-﻿using System;
+using MySql.Data.MySqlClient;
+using System;
 using System.Collections.Generic;
 using System.Data;
-using YesSql.Sql;
+using System.Text;
 
 namespace YesSql.Provider.MySql
 {
@@ -36,12 +37,7 @@ namespace YesSql.Provider.MySql
         public override string IdentitySelectString => "; select LAST_INSERT_ID()";
         public override string IdentityColumnString => "int AUTO_INCREMENT primary key";
         public override bool SupportsIfExistsBeforeTableName => true;
-
-        public override ISqlBuilder CreateBuilder(string tablePrefix)
-        {
-            return new MySqlSqlBuilder(tablePrefix, this);
-        }
-
+        
         public override string GetTypeName(DbType dbType, int? length, byte precision, byte scale)
         {
             if (length.HasValue)
@@ -97,18 +93,25 @@ namespace YesSql.Provider.MySql
 
         public override string DefaultValuesInsert => "VALUES()";
 
-        public override void Page(ISqlBuilder sqlBuilder, int offset, int limit)
+        public override void Page(ISqlBuilder sqlBuilder, string offset, string limit)
         {
-            if (offset == 0 && limit != 0)
+            if (offset != null && limit == null)
             {
-                // Insert LIMIT clause after the select
-                var selector = sqlBuilder.GetSelector();
-                selector = " " + selector + " limit " + limit;
-                sqlBuilder.Selector(selector);
+                limit = "-1";
             }
-            else if (offset != 0 || limit != 0)
+
+            if (limit != null)
             {
-                sqlBuilder.Trail = "OFFSET " + offset + " ROWS FETCH FIRST " + limit + " ROWS ONLY";
+                sqlBuilder.Trail(" LIMIT ");
+
+                // c.f. https://stackoverflow.com/questions/255517/mysql-offset-infinite-rows
+                sqlBuilder.Trail(limit == "-1" ? "18446744073709551610" : limit);
+
+                if (offset != null)
+                {
+                    sqlBuilder.Trail(" OFFSET ");
+                    sqlBuilder.Trail(offset);
+                }
             }
         }
 
@@ -125,6 +128,23 @@ namespace YesSql.Provider.MySql
         protected override string Quote(string value)
         {
             return QuoteString + value.Replace(QuoteString, DoubleQuoteString) + QuoteString;
+        }
+
+        public override void Concat(StringBuilder builder, params Action<StringBuilder>[] generators)
+        {
+            builder.Append("concat(");
+
+            for (var i = 0; i < generators.Length; i++)
+            {
+                if (i > 0)
+                {
+                    builder.Append(", ");
+                }
+
+                generators[i](builder);
+            }
+
+            builder.Append(")");
         }
     }
 }

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Text;
 using YesSql.Sql;
 
 namespace YesSql.Provider.Sqlite
@@ -63,24 +62,27 @@ namespace YesSql.Provider.Sqlite
             throw new Exception("DbType not found for: " + dbType);
         }
 
-        public override void Page(ISqlBuilder sqlBuilder, int offset, int limit)
+        public override void Page(ISqlBuilder sqlBuilder, string offset, string limit)
         {
-            var sb = new StringBuilder();
+            sqlBuilder.ClearTrail();
 
-            sb.Append(" limit ");
-
-            if (limit != 0)
+            // If offset is defined without limit, use -1 as limit is mandatory on Sqlite
+            if (offset != null && limit == null)
             {
-                sb.Append(limit);
+                limit = "-1";
             }
 
-            if (offset != 0)
+            if (limit != null)
             {
-                sb.Append(" offset ");
-                sb.Append(offset);
+                sqlBuilder.Trail(" LIMIT ");
+                sqlBuilder.Trail(limit);
             }
 
-            sqlBuilder.Trail = sb.ToString();
+            if (offset != null)
+            {
+                sqlBuilder.Trail(" OFFSET ");
+                sqlBuilder.Trail(offset);
+            }
         }
 
         protected override string Quote(string value)
@@ -96,11 +98,6 @@ namespace YesSql.Provider.Sqlite
         public override string QuoteForTableName(string tableName)
         {
             return QuoteString + tableName.Replace(QuoteString, DoubleQuoteString) + QuoteString;
-        }
-
-        public override ISqlBuilder CreateBuilder(string tablePrefix)
-        {
-            return new SqliteSqlBuilder(tablePrefix, this);
         }
     }
 }

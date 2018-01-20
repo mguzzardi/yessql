@@ -1,4 +1,6 @@
+using System;
 using System.Data;
+using System.Text;
 
 namespace YesSql
 {
@@ -25,8 +27,9 @@ namespace YesSql
         string NotInSelectOperator(string query);
         string GetDropForeignKeyConstraintString(string name);
         string GetAddForeignKeyConstraintString(string name, string[] srcColumns, string destTable, string[] destColumns, bool primaryKey);
+        void Concat(StringBuilder builder, params Action<StringBuilder>[] generators);
         string DefaultValuesInsert { get; }
-        void Page(ISqlBuilder sqlBuilder, int offset, int limit);
+        void Page(ISqlBuilder sqlBuilder, string offset, string limit);
         ISqlBuilder CreateBuilder(string tablePrefix);
         string RenderMethod(string name, params string[] args);
 

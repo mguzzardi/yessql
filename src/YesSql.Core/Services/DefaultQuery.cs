@@ -1,5 +1,6 @@
 using Dapper;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -66,16 +67,39 @@ namespace YesSql.Services
                 builder.Append(")");
             };
 
+            MethodMappings[typeof(String).GetMethod(nameof(String.Concat), new Type[] { typeof(string[]) })] =
+            MethodMappings[typeof(String).GetMethod(nameof(String.Concat), new Type[] { typeof(string), typeof(string) })] =
+            MethodMappings[typeof(String).GetMethod(nameof(String.Concat), new Type[] { typeof(string), typeof(string), typeof(string) })] =
+            MethodMappings[typeof(String).GetMethod(nameof(String.Concat), new Type[] { typeof(string), typeof(string), typeof(string), typeof(string) })] =
+                (query, builder, dialect, expression) =>
+            {
+                var generators = new List<Action<StringBuilder>>();
+
+                foreach (var argument in expression.Arguments)
+                {
+                    generators.Add(sb => query.ConvertFragment(sb, argument));
+                }
+
+                dialect.Concat(builder, generators.ToArray());
+            };
+
             MethodMappings[typeof(DefaultQueryExtensions).GetMethod("IsIn")] =
                 (query, builder, dialect, expression) =>
                 {
-                    var values = (Expression.Lambda(expression.Arguments[1]).Compile().DynamicInvoke() as IEnumerable<object>).ToArray();
+                    // Could be simplified if int[] could be casted to IEnumerable<object>
+                    var objects = Expression.Lambda(expression.Arguments[1]).Compile().DynamicInvoke() as IEnumerable;
+                    var values = new List<object>();
 
-                    if (values.Length == 0)
+                    foreach(var o in objects)
+                    {
+                        values.Add(o);
+                    }
+
+                    if (values.Count == 0)
                     {
                         builder.Append(" 1 = 0");
                     }
-                    else if (values.Length == 1)
+                    else if (values.Count == 1)
                     {
                         query.ConvertFragment(builder, expression.Arguments[0]);
                         builder.Append(" = " );
@@ -85,10 +109,10 @@ namespace YesSql.Services
                     {
                         query.ConvertFragment(builder, expression.Arguments[0]);
                         var elements = new StringBuilder();
-                        for (var i = 0; i < values.Length; i++)
+                        for (var i = 0; i < values.Count; i++)
                         {
                             query.ConvertFragment(elements, Expression.Constant(values[i]));
-                            if (i < values.Length - 1)
+                            if (i < values.Count - 1)
                             {
                                 elements.Append(", ");
                             }
@@ -158,7 +182,7 @@ namespace YesSql.Services
 
                     // Insert query
                     query.ConvertFragment(builder, expression.Arguments[0]);
-                    builder.Append(dialect.InSelectOperator(sqlBuilder.ToSqlString(dialect)));
+                    builder.Append(dialect.InSelectOperator(sqlBuilder.ToSqlString()));
                 };
 
             MethodMappings[typeof(DefaultQueryExtensionsIndex).GetMethod("IsNotIn")] =
@@ -189,7 +213,7 @@ namespace YesSql.Services
 
                     // Insert query
                     query.ConvertFragment(builder, expression.Arguments[0]);
-                    builder.Append(dialect.NotInSelectOperator(sqlBuilder.ToSqlString(dialect)));
+                    builder.Append(dialect.NotInSelectOperator(sqlBuilder.ToSqlString()));
                 };
         }
 
@@ -205,7 +229,7 @@ namespace YesSql.Services
 
         public override string ToString()
         {
-            return _sqlBuilder.ToSqlString(_dialect);
+            return _sqlBuilder.ToSqlString();
         }
 
         private void Bind<TIndex>() where TIndex : IIndex
@@ -237,8 +261,15 @@ namespace YesSql.Services
 
         private void Page(int count, int skip)
         {
-            _sqlBuilder.Skip(skip);
-            _sqlBuilder.Take(count);
+            if (skip > 0)
+            {
+                _sqlBuilder.Skip(skip.ToString());
+            }
+
+            if (count > 0)
+            {
+                _sqlBuilder.Take(count.ToString());
+            }
         }
 
         private void Filter<TIndex>(Expression<Func<TIndex, bool>> predicate) where TIndex : IIndex
@@ -269,11 +300,16 @@ namespace YesSql.Services
             {
                 case ExpressionType.Constant:
                     return (ConstantExpression)expression;
+
+                case ExpressionType.Convert:
+                    return Evaluate(((UnaryExpression)expression).Operand);
+
                 case ExpressionType.New:
                     var newExpression = (NewExpression)expression;
                     var arguments = newExpression.Arguments.Select(a => Evaluate(a).Value).ToArray();
                     var value = newExpression.Constructor.Invoke(arguments);
                     return Expression.Constant(value);
+
                 case ExpressionType.Call:
                     var methodExpression = (MethodCallExpression)expression;
                     arguments = methodExpression.Arguments.Select(a => Evaluate(a).Value).ToArray();
@@ -353,6 +389,31 @@ namespace YesSql.Services
                     break;
                 case ExpressionType.NotEqual:
                     ConvertComparisonBinaryExpression(builder, (BinaryExpression)expression, " <> ");
+                    break;
+                case ExpressionType.Add:
+                    var binaryExpression = (BinaryExpression)expression;
+
+                    // Is it supposed to be a concatenation?
+                    if (binaryExpression.Left.Type == typeof(string) || binaryExpression.Right.Type == typeof(string))
+                    {
+                        ConvertConcatenateBinaryExpression(builder, binaryExpression);
+                    }
+                    else
+                    {
+                        ConvertComparisonBinaryExpression(builder, binaryExpression, " + ");
+                    }
+                    break;
+                case ExpressionType.Subtract:
+                    ConvertComparisonBinaryExpression(builder, (BinaryExpression)expression, " - ");
+                    break;
+                case ExpressionType.Multiply:
+                    ConvertComparisonBinaryExpression(builder, (BinaryExpression)expression, " * ");
+                    break;
+                case ExpressionType.Divide:
+                    ConvertComparisonBinaryExpression(builder, (BinaryExpression)expression, " / ");
+                    break;
+                case ExpressionType.Convert:
+                    ConvertFragment(builder, ((UnaryExpression)expression).Operand);
                     break;
                 case ExpressionType.IsTrue:
                     ConvertFragment(builder, ((UnaryExpression)expression).Operand);
@@ -448,6 +509,7 @@ namespace YesSql.Services
 
                     return true;
                 case ExpressionType.Not:
+                case ExpressionType.Convert:
                     return true;
                 case ExpressionType.GreaterThan:
                 case ExpressionType.GreaterThanOrEqual:
@@ -459,6 +521,10 @@ namespace YesSql.Services
                 case ExpressionType.OrElse:
                 case ExpressionType.Equal:
                 case ExpressionType.NotEqual:
+                case ExpressionType.Add:
+                case ExpressionType.Multiply:
+                case ExpressionType.Divide:
+                case ExpressionType.Subtract:
                     var binaryExpression = (BinaryExpression)expression;
                     return IsParameterBased(binaryExpression.Left) || IsParameterBased(binaryExpression.Right);
                 case ExpressionType.IsTrue:
@@ -497,6 +563,11 @@ namespace YesSql.Services
             builder.Append(operation);
             ConvertFragment(builder, expression.Right);
             builder.Append(")");
+        }
+
+        private void ConvertConcatenateBinaryExpression(StringBuilder builder, BinaryExpression expression)
+        {
+            _dialect.Concat(builder, b => ConvertFragment(b, expression.Left), b => ConvertFragment(b, expression.Right));
         }
 
         private void ConvertEqualityBinaryExpression(StringBuilder builder, BinaryExpression expression, string operation)
@@ -556,12 +627,12 @@ namespace YesSql.Services
             await _session.CommitAsync();
 
             _sqlBuilder.Selector("count(*)");
-            var sql = _sqlBuilder.ToSqlString(_dialect, true);
+            var sql = _sqlBuilder.ToSqlString(true);
 
             var key = new WorkerQueryKey(sql, _sqlBuilder.Parameters);
-            return await _session._store.ProduceAsync(key, () =>
+            return await _session._store.ProduceAsync(key, async () =>
             {
-                return _connection.ExecuteScalarAsync<int>(sql, _sqlBuilder.Parameters, _transaction);
+                return await _connection.ExecuteScalarAsync<int>(sql, _sqlBuilder.Parameters, _transaction);
             });
         }
 
@@ -627,21 +698,21 @@ namespace YesSql.Services
                 if (typeof(IIndex).IsAssignableFrom(typeof(T)))
                 {
                     _query._sqlBuilder.Selector("*");
-                    var sql = _query._sqlBuilder.ToSqlString(_query._dialect);
+                    var sql = _query._sqlBuilder.ToSqlString();
                     var key = new WorkerQueryKey(sql, _query._sqlBuilder.Parameters);
-                    return (await _query._session._store.ProduceAsync(key, () =>
+                    return (await _query._session._store.ProduceAsync(key, async () =>
                     {
-                        return _query._connection.QueryAsync<T>(sql, _query._sqlBuilder.Parameters, _query._transaction);
+                        return await _query._connection.QueryAsync<T>(sql, _query._sqlBuilder.Parameters, _query._transaction);
                     })).FirstOrDefault();
                 }
                 else
                 {
                     _query._sqlBuilder.Selector(_query._documentTable, "*");
-                    var sql = _query._sqlBuilder.ToSqlString(_query._dialect);
+                    var sql = _query._sqlBuilder.ToSqlString();
                     var key = new WorkerQueryKey(sql, _query._sqlBuilder.Parameters);
-                    var documents = (await _query._session._store.ProduceAsync(key, () =>
+                    var documents = (await _query._session._store.ProduceAsync(key, async () =>
                     {
-                        return _query._connection.QueryAsync<Document>(sql, _query._sqlBuilder.Parameters, _query._transaction);
+                        return await _query._connection.QueryAsync<Document>(sql, _query._sqlBuilder.Parameters, _query._transaction);
                     })).ToArray();
 
                     if (documents.Length == 0)
@@ -666,21 +737,21 @@ namespace YesSql.Services
                 if (typeof(IIndex).IsAssignableFrom(typeof(T)))
                 {
                     _query._sqlBuilder.Selector("*");
-                    var sql = _query._sqlBuilder.ToSqlString(_query._dialect);
+                    var sql = _query._sqlBuilder.ToSqlString();
                     var key = new WorkerQueryKey(sql, _query._sqlBuilder.Parameters);
-                    return await _query._session._store.ProduceAsync(key,() =>
+                    return await _query._session._store.ProduceAsync(key, async () =>
                     {
-                        return _query._connection.QueryAsync<T>(sql, _query._sqlBuilder.Parameters, _query._transaction);
+                        return await _query._connection.QueryAsync<T>(sql, _query._sqlBuilder.Parameters, _query._transaction);
                     });
                 }
                 else
                 {
                     _query._sqlBuilder.Selector(_query._sqlBuilder.FormatColumn(_query._documentTable, "*"));
-                    var sql = _query._sqlBuilder.ToSqlString(_query._dialect);
+                    var sql = _query._sqlBuilder.ToSqlString();
                     var key = new WorkerQueryKey(sql, _query._sqlBuilder.Parameters);
-                    var documents = await _query._session._store.ProduceAsync(key, () =>
+                    var documents = await _query._session._store.ProduceAsync(key, async () =>
                     {
-                        return _query._connection.QueryAsync<Document>(sql, _query._sqlBuilder.Parameters, _query._transaction);
+                        return await _query._connection.QueryAsync<Document>(sql, _query._sqlBuilder.Parameters, _query._transaction);
                     });
 
                     return _query._session.Get<T>(documents.ToArray());
@@ -689,13 +760,13 @@ namespace YesSql.Services
 
             IQuery<T> IQuery<T>.Skip(int count)
             {
-                _query._sqlBuilder.Skip(count);
+                _query._sqlBuilder.Skip(count.ToString());
                 return this;
             }
 
             IQuery<T> IQuery<T>.Take(int count)
             {
-                _query._sqlBuilder.Take(count);
+                _query._sqlBuilder.Take(count.ToString());
                 return this;
             }
 
@@ -735,13 +806,13 @@ namespace YesSql.Services
 
             IQueryIndex<T> IQueryIndex<T>.Skip(int count)
             {
-                _query._sqlBuilder.Skip(count);
+                _query._sqlBuilder.Skip(count.ToString());
                 return this;
             }
 
             IQueryIndex<T> IQueryIndex<T>.Take(int count)
             {
-                _query._sqlBuilder.Take(count);
+                _query._sqlBuilder.Take(count.ToString());
                 return this;
             }
 
@@ -873,16 +944,15 @@ namespace YesSql.Services
 
     public static class DefaultQueryExtensions
     {
-        public static bool IsIn(this object source, IEnumerable<string> values)
+        public static bool IsIn(this object source, IEnumerable values)
         {
             return false;
         }
 
-        public static bool IsNotIn(this object source, IEnumerable<string> values)
+        public static bool IsNotIn(this object source, IEnumerable values)
         {
             return false;
         }
-
     }
 
     public static class DefaultQueryExtensionsIndex

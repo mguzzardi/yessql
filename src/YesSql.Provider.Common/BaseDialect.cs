@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.Text;
+using YesSql.Sql;
 
 namespace YesSql.Provider
 {
@@ -150,8 +151,11 @@ namespace YesSql.Provider
             return "null";
         }
 
-        public abstract void Page(ISqlBuilder sqlBuilder, int offset, int limit);
-        public abstract ISqlBuilder CreateBuilder(string tablePrefix);
+        public abstract void Page(ISqlBuilder sqlBuilder, string offset, string limit);
+        public virtual ISqlBuilder CreateBuilder(string tablePrefix)
+        {
+            return new SqlBuilder(tablePrefix, this);
+        }
 
         public string RenderMethod(string name, string[] args)
         {
@@ -161,6 +165,23 @@ namespace YesSql.Provider
             }
 
             return name + "(" + String.Join(", ", args) +  ")";
+        }
+
+        public virtual void Concat(StringBuilder builder, params Action<StringBuilder>[] generators)
+        {
+            builder.Append("(");
+
+            for (var i = 0; i < generators.Length; i++)
+            {
+                if (i > 0)
+                {
+                    builder.Append(" || ");
+                }
+
+                generators[i](builder);
+            }
+
+            builder.Append(")");
         }
 
         //parameters

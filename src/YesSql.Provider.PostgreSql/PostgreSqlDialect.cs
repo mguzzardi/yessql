@@ -52,11 +52,6 @@ namespace YesSql.Provider.PostgreSql
         public override string IdentityColumnString => "SERIAL PRIMARY KEY";
         public override bool SupportsIfExistsBeforeTableName => true;
 
-        public override ISqlBuilder CreateBuilder(string tablePrefix)
-        {
-            return new PostgreSqlSqlBuilder(tablePrefix, this);
-        }
-
         public override string GetTypeName(DbType dbType, int? length, byte precision, byte scale)
         {
             if (length.HasValue)
@@ -112,24 +107,25 @@ namespace YesSql.Provider.PostgreSql
 
         public override string DefaultValuesInsert => "DEFAULT VALUES";
 
-        public override void Page(ISqlBuilder sqlBuilder, int offset, int limit)
+        public override void Page(ISqlBuilder sqlBuilder, string offset, string limit)
         {
-            var sb = new StringBuilder();
+            sqlBuilder.Trail(" limit ");
 
-            sb.Append(" limit ");
-
-            if (limit != 0)
+            if (offset != null && limit == null)
             {
-                sb.Append(limit);
+                sqlBuilder.Trail(" all");
             }
 
-            if (offset != 0)
+            if (limit != null)
             {
-                sb.Append(" offset ");
-                sb.Append(offset);
+                sqlBuilder.Trail(limit);
             }
 
-            sqlBuilder.Trail = sb.ToString();
+            if (offset != null)
+            {
+                sqlBuilder.Trail(" offset ");
+                sqlBuilder.Trail(offset);
+            }
         }
 
         public override string QuoteForColumnName(string columnName)
