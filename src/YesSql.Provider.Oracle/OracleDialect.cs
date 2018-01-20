@@ -47,11 +47,6 @@ namespace YesSql.Provider.Oracle
 
         public override string Name => "Oracle";
 
-        public override ISqlBuilder CreateBuilder(string tablePrefix)
-        {
-            return new OracleSqlBuilder(tablePrefix, this);
-        }
-
         public override string GetTypeName(DbType dbType, int? length, byte precision, byte scale)
         {
             if (length.HasValue)
@@ -102,11 +97,21 @@ namespace YesSql.Provider.Oracle
 
         public override string DefaultValuesInsert => "VALUES()";
 
-        public override void Page(ISqlBuilder sqlBuilder, int offset, int limit)
+        public override void Page(ISqlBuilder sqlBuilder, string offset, string limit)
         {
-            if (offset != 0 || limit != 0)
+            //only Oracle 12c
+            if (offset != null)
             {
-                sqlBuilder.Trail = "OFFSET " + offset + " ROWS FETCH FIRST " + limit + " ROWS ONLY"; //only Oracle 12c
+                sqlBuilder.Trail(" OFFSET ");
+                sqlBuilder.Trail(offset);
+                sqlBuilder.Trail(" ROWS");
+            }
+
+            if (limit != null)
+            {
+                sqlBuilder.Trail(" FETCH NEXT ");
+                sqlBuilder.Trail(limit);
+                sqlBuilder.Trail(" ROWS ONLY");
             }
         }
 
