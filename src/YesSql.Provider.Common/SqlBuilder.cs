@@ -33,7 +33,7 @@ namespace YesSql.Sql
         protected List<string> OrderSegments => _order = _order ?? new List<string>();
         protected List<string> TrailSegments => _trail = _trail ?? new List<string>();
 
-        public Dictionary<string, object> Parameters { get; } = new Dictionary<string, object>();
+        public Dictionary<string, object> Parameters { get; protected set; } = new Dictionary<string, object>();
 
         public SqlBuilder(string tablePrefix, ISqlDialect dialect)
         {
@@ -46,13 +46,15 @@ namespace YesSql.Sql
         public void Table(string table)
         {
             FromSegments.Clear();
-            FromSegments.Add(_dialect.QuoteForTableName(table));
+            FromSegments.Add(_dialect.QuoteForTableName(_tablePrefix + table));
         }
 
         public void From(string from)
         {
             FromSegments.Add(from);
         }
+
+        public bool HasPaging => _skip != null || _count != null;
 
         public void Skip(string skip)
         {
@@ -132,6 +134,13 @@ namespace YesSql.Sql
             WhereSegments.Add(where);
         }
 
+        public bool HasOrder => _order != null && _order.Count > 0;
+
+        public void ClearOrder()
+        {
+            _order = null;
+        }
+
         public virtual void OrderBy(string orderBy)
         {
             OrderSegments.Add(orderBy);
@@ -176,7 +185,7 @@ namespace YesSql.Sql
             TrailSegments.Clear();
         }
 
-        public virtual string ToSqlString(bool ignoreOrderBy = false)
+        public virtual string ToSqlString()
         {
             if (String.Equals(_clause, "SELECT", StringComparison.OrdinalIgnoreCase))
             {
@@ -222,16 +231,6 @@ namespace YesSql.Sql
                     }
                 }
 
-                if (_order != null && !ignoreOrderBy)
-                {
-                    sb.Append(" ORDER BY ");
-
-                    foreach (var s in _order)
-                    {
-                        sb.Append(s);
-                    }
-                }
-
                 if (_group != null)
                 {
                     sb.Append(" GROUP BY ");
@@ -252,6 +251,16 @@ namespace YesSql.Sql
                     }
                 }
 
+                if (_order != null)
+                {
+                    sb.Append(" ORDER BY ");
+
+                    foreach (var s in _order)
+                    {
+                        sb.Append(s);
+                    }
+                }
+
                 if (_trail != null)
                 {
                     foreach (var s in _trail)
@@ -264,6 +273,28 @@ namespace YesSql.Sql
             }
 
             return "";
-        }       
+        }
+
+        public ISqlBuilder Clone()
+        {
+            var clone = new SqlBuilder(_tablePrefix, _dialect);
+
+            clone._clause = _clause;
+            clone._table = _table;
+
+            clone._select = _select == null ? null : new List<string>(_select);
+            clone._from = _from == null ? null : new List<string>(_from);
+            clone._join = _join == null ? null : new List<string>(_join);
+            clone._where = _where == null ? null : new List<string>(_where);
+            clone._group = _group == null ? null : new List<string>(_group);
+            clone._having = _having == null ? null : new List<string>(_having);
+            clone._order = _order == null ? null : new List<string>(_order);
+            clone._trail = _trail == null ? null : new List<string>(_trail);
+            clone._skip = _skip;
+            clone._count = _count;
+
+            clone.Parameters = new Dictionary<string, object>(Parameters);
+            return clone;
+        }
     }
 }

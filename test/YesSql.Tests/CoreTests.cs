@@ -1,8 +1,6 @@
 using Dapper;
 using System;
-using System.Collections.Generic;
 using System.Data;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,6 +15,7 @@ namespace YesSql.Tests
 {
     public abstract class CoreTests : IDisposable
     {
+        protected virtual string TablePrefix => "tp";
 
         protected IStore _store;
 
@@ -27,7 +26,7 @@ namespace YesSql.Tests
 
         public void Dispose()
         {
-            CleanDatabase();
+            CleanDatabase(false);
             _store.Dispose();
 
             OnDispose();
@@ -37,13 +36,13 @@ namespace YesSql.Tests
         {
         }
 
-        [DebuggerNonUserCode]
-        protected virtual void CleanDatabase()
+        //[DebuggerNonUserCode]
+        protected virtual void CleanDatabase(bool throwOnError)
         {
             // Remove existing tables
             using (var session = _store.CreateSession())
             {
-                var builder = new SchemaBuilder(session) { ThrowOnError = false };
+                var builder = new SchemaBuilder(session) { ThrowOnError = throwOnError };
 
                 builder.DropReduceIndexTable(nameof(ArticlesByDay));
                 builder.DropMapIndexTable(nameof(ArticleByPublishedDate));
@@ -62,11 +61,11 @@ namespace YesSql.Tests
                 builder.DropTable("Collection1_Document");
                 builder.DropTable(LinearBlockIdGenerator.TableName);
 
-                OnCleanDatabase(session);
+                OnCleanDatabase(builder, session);
             }
         }
 
-        protected virtual void OnCleanDatabase(ISession session)
+        protected virtual void OnCleanDatabase(SchemaBuilder builder, ISession session)
         {
 
         }
@@ -92,7 +91,7 @@ namespace YesSql.Tests
 
                 builder.CreateMapIndexTable(nameof(ArticleByPublishedDate), column => column
                         .Column<DateTime>(nameof(ArticleByPublishedDate.PublishedDateTime))
-                        .Column<DateTimeOffset>(nameof(ArticleByPublishedDate.PublishedDateTimeOffset))
+                        .Column<string>(nameof(ArticleByPublishedDate.Title))
                     );
 
                 builder.CreateMapIndexTable(nameof(PersonByName), column => column
@@ -242,6 +241,51 @@ namespace YesSql.Tests
 
                 Assert.NotNull(person);
                 Assert.Equal("Bill", (string)person.Name);
+            }
+        }
+
+        [Fact]
+        public async Task ShouldQueryNullValues()
+        {
+            _store.RegisterIndexes<PersonIndexProvider>();
+
+            using (var session = _store.CreateSession())
+            {
+                session.Save(new Person { Firstname = null });
+                session.Save(new Person { Firstname = "a" });
+                session.Save(new Person { Firstname = "b" });
+            }
+
+            using (var session = _store.CreateSession())
+            {
+                Assert.Equal(1, await session.QueryIndex<PersonByName>(x => x.Name == null).CountAsync());
+                Assert.Equal(2, await session.QueryIndex<PersonByName>(x => x.Name != null).CountAsync());
+                Assert.Equal(1, await session.QueryIndex<PersonByName>(x => null == x.Name).CountAsync());
+                Assert.Equal(2, await session.QueryIndex<PersonByName>(x => null != x.Name).CountAsync());
+                Assert.Equal(3, await session.QueryIndex<PersonByName>(x => null == null).CountAsync());
+                Assert.Equal(0, await session.QueryIndex<PersonByName>(x => null != null).CountAsync());
+            }
+        }
+
+        [Fact]
+        public async Task ShouldCompareWithConstants()
+        {
+            _store.RegisterIndexes<ArticleBydPublishedDateProvider>();
+
+            using (var session = _store.CreateSession())
+            {
+                session.Save(new Article { Title = TestConstants.Strings.SomeString, PublishedUtc = new DateTime(2011, 11, 1) });
+                session.Save(new Article { Title = TestConstants.Strings.SomeOtherString, PublishedUtc = new DateTime(2011, 11, 1) });
+                session.Save(new Article { Title = TestConstants.Strings.SomeString, PublishedUtc = new DateTime(2011, 11, 2) });
+                session.Save(new Article { Title = TestConstants.Strings.SomeOtherString, PublishedUtc = new DateTime(2011, 11, 2) });
+            }
+
+            using (var session = _store.CreateSession())
+            {
+                Assert.Equal(2, await session.Query<Article, ArticleByPublishedDate>(x => x.Title == TestConstants.Strings.SomeString).CountAsync());
+                Assert.Equal(2, await session.Query<Article, ArticleByPublishedDate>(x => x.Title != TestConstants.Strings.SomeString).CountAsync());
+                Assert.Equal(4, await session.Query<Article, ArticleByPublishedDate>(x => x.PublishedDateTime < DateTime.UtcNow).CountAsync());
+                Assert.Equal(2, await session.Query<Article, ArticleByPublishedDate>(x => x.Title != TestConstants.Strings.SomeString && x.PublishedDateTime < DateTime.UtcNow).CountAsync());
             }
         }
 
@@ -1335,6 +1379,87 @@ namespace YesSql.Tests
         public async Task ShouldPageResults()
         {
             _store.RegisterIndexes<PersonIndexProvider>();
+            var random = new Random();
+            using (var session = _store.CreateSession())
+            {
+                var indices = Enumerable.Range(0, 100).Select(x => x).ToList();
+
+                // Randomize indices
+                for (var i = 0; i < 100; i++)
+                {
+                    var a = random.Next(99);
+                    var b = random.Next(99);
+
+                    var tmp = indices[a];
+                    indices[a] = indices[b];
+                    indices[b] = tmp;
+                }
+
+                for (int i = 0; i < 100; i++)
+                {
+                    var person = new Person
+                    {
+                        Firstname = "Bill" + indices[i].ToString("D2"),
+                        Lastname = "Gates" + indices[i].ToString("D2"),
+                    };
+
+                    session.Save(person);
+                }
+            }
+
+            using (var session = _store.CreateSession())
+            {
+                Assert.Equal(100, await session.QueryIndex<PersonByName>().CountAsync());
+                Assert.Equal(10, (await session.QueryIndex<PersonByName>().OrderBy(x => x.Name).Skip(0).Take(10).ListAsync()).Count());
+                Assert.Equal(10, (await session.QueryIndex<PersonByName>().OrderBy(x => x.Name).Skip(10).Take(10).ListAsync()).Count());
+                Assert.Equal(5, (await session.QueryIndex<PersonByName>().OrderBy(x => x.Name).Skip(95).Take(10).ListAsync()).Count());
+                Assert.Equal(90, (await session.QueryIndex<PersonByName>().OrderBy(x => x.Name).Skip(10).ListAsync()).Count());
+
+                var ordered = (await session.QueryIndex<PersonByName>().OrderBy(x => x.Name).Skip(95).Take(10).ListAsync()).ToList();
+
+                for (var i = 1; i < ordered.Count; i++)
+                {
+                    Assert.Equal(1, String.Compare(ordered[i].Name, ordered[i - 1].Name));
+                }
+            }
+
+            using (var session = _store.CreateSession())
+            {
+                Assert.Equal(100, await session.QueryIndex<PersonByName>().CountAsync());
+                Assert.Equal(10, (await session.QueryIndex<PersonByName>().OrderByDescending(x => x.Name).Skip(0).Take(10).ListAsync()).Count());
+                Assert.Equal(10, (await session.QueryIndex<PersonByName>().OrderByDescending(x => x.Name).Skip(10).Take(10).ListAsync()).Count());
+                Assert.Equal(5, (await session.QueryIndex<PersonByName>().OrderByDescending(x => x.Name).Skip(95).Take(10).ListAsync()).Count());
+                Assert.Equal(90, (await session.QueryIndex<PersonByName>().OrderByDescending(x => x.Name).Skip(10).ListAsync()).Count());
+
+                var ordered = (await session.QueryIndex<PersonByName>().OrderByDescending(x => x.Name).Skip(95).Take(10).ListAsync()).ToList();
+
+                for (var i = 1; i < ordered.Count; i++)
+                {
+                    Assert.Equal(-1, String.Compare(ordered[i].Name, ordered[i - 1].Name));
+                }
+            }
+
+            using (var session = _store.CreateSession())
+            {
+                var query = session.QueryIndex<PersonByName>().OrderBy(x => x.Name).Skip(95).Take(10);
+
+                Assert.Equal(100, await query.CountAsync());
+
+                var ordered = (await query.ListAsync()).ToList();
+
+                Assert.Equal(5, ordered.Count);
+
+                for (var i = 1; i < ordered.Count; i++)
+                {
+                    Assert.Equal(1, String.Compare(ordered[i].Name, ordered[i - 1].Name));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ShouldPageWithoutOrder()
+        {
+            _store.RegisterIndexes<PersonIndexProvider>();
 
             using (var session = _store.CreateSession())
             {
@@ -1352,16 +1477,23 @@ namespace YesSql.Tests
 
             using (var session = _store.CreateSession())
             {
-                Assert.Equal(100, await session.QueryIndex<PersonByName>().CountAsync());
-                Assert.Equal(10, (await session.QueryIndex<PersonByName>().OrderBy(x => x.Name).Skip(0).Take(10).ListAsync()).Count());
-                Assert.Equal(10, (await session.QueryIndex<PersonByName>().OrderBy(x => x.Name).Skip(10).Take(10).ListAsync()).Count());
-                Assert.Equal(5, (await session.QueryIndex<PersonByName>().OrderBy(x => x.Name).Skip(95).Take(10).ListAsync()).Count());
-                Assert.Equal(90, (await session.QueryIndex<PersonByName>().OrderBy(x => x.Name).Skip(10).ListAsync()).Count());
-                Assert.Equal(1, await session.QueryIndex<PersonByName>(x => x.Name == "Bill0").CountAsync());
+                // Count() should remove paging and order as it's not supported by some databases
+                Assert.Equal(100, await session.Query<Person>().CountAsync());
+                Assert.Equal(100, await session.Query<Person>().Skip(10).CountAsync());
+                Assert.Equal(100, await session.Query<Person>().Take(10).CountAsync());
+                Assert.Equal(100, await session.Query<Person>().Skip(95).Take(10).CountAsync());
 
-                var persons = await session.Query<Person, PersonByName>().Take(10).ListAsync();
+                // Using ListAsync().Count() as CountAsync() remove Order
+                Assert.Equal(100, (await session.Query<Person>().ListAsync()).Count());
+                Assert.Equal(90, (await session.Query<Person>().Skip(10).ListAsync()).Count());
+                Assert.Equal(10, (await session.Query<Person>().Take(10).ListAsync()).Count());
+                Assert.Equal(5, (await session.Query<Person>().Skip(95).Take(10).ListAsync()).Count());
 
-                Assert.Equal(10, persons.Count());
+                Assert.Equal(10, (await session.QueryIndex<PersonByName>().Skip(0).Take(10).ListAsync()).Count());
+                Assert.Equal(10, (await session.QueryIndex<PersonByName>().Skip(10).Take(10).ListAsync()).Count());
+                Assert.Equal(5, (await session.QueryIndex<PersonByName>().Skip(95).Take(10).ListAsync()).Count());
+                Assert.Equal(90, (await session.QueryIndex<PersonByName>().Skip(10).ListAsync()).Count());
+                Assert.Equal(10, (await session.QueryIndex<PersonByName>().Take(10).ListAsync()).Count());
             }
         }
 
@@ -2264,49 +2396,11 @@ namespace YesSql.Tests
             using (var session = _store.CreateSession())
             {
                 Assert.Equal(10, await session.QueryIndex<ArticleByPublishedDate>().CountAsync());
-
+                Assert.Equal(10, (await session.QueryIndex<ArticleByPublishedDate>().ListAsync()).Count());
                 Assert.Equal(4, await session.QueryIndex<ArticleByPublishedDate>(x => x.PublishedDateTime == new DateTime(2011, 11, 1, 0, 0, 0, DateTimeKind.Utc)).CountAsync());
-            }
-        }
 
-        [Fact]
-        public virtual async Task ShouldIndexWithDateTimeOffset()
-        {
-            _store.RegisterIndexes<ArticleBydPublishedDateProvider>();
-
-            using (var session = _store.CreateSession())
-            {
-                var dates = new[]
-                {
-                    new DateTime(2011, 11, 1, 0, 0, 0, DateTimeKind.Utc),
-                    new DateTime(2011, 11, 2, 0, 0, 0, DateTimeKind.Utc),
-                    new DateTime(2011, 11, 3, 0, 0, 0, DateTimeKind.Utc),
-                    new DateTime(2011, 11, 4, 0, 0, 0, DateTimeKind.Utc),
-                    new DateTime(2011, 11, 1, 0, 0, 0, DateTimeKind.Utc),
-                    new DateTime(2011, 11, 2, 0, 0, 0, DateTimeKind.Utc),
-                    new DateTime(2011, 11, 3, 0, 0, 0, DateTimeKind.Utc),
-                    new DateTime(2011, 11, 1, 0, 0, 0, DateTimeKind.Utc),
-                    new DateTime(2011, 11, 2, 0, 0, 0, DateTimeKind.Utc),
-                    new DateTime(2011, 11, 1, 0, 0, 0, DateTimeKind.Utc)
-                };
-
-                var articles = dates.Select((x, i) => new Article
-                {
-                    PublishedUtc = x
-                });
-
-
-                foreach (var article in articles)
-                {
-                    session.Save(article);
-                }
-            }
-
-            using (var session = _store.CreateSession())
-            {
-                Assert.Equal(10, await session.QueryIndex<ArticleByPublishedDate>().CountAsync());
-
-                Assert.Equal(4, await session.QueryIndex<ArticleByPublishedDate>(x => x.PublishedDateTimeOffset == new DateTimeOffset(2011, 11, 1, 0, 0, 0, new TimeSpan(0))).CountAsync());
+                var list = await session.QueryIndex<ArticleByPublishedDate>(x => x.PublishedDateTime < new DateTime(2011, 11, 2, 0, 0, 0, DateTimeKind.Utc)).ListAsync();
+                Assert.Equal(4, list.Count());
             }
         }
 
@@ -2407,7 +2501,7 @@ namespace YesSql.Tests
             using (var connection = _store.Configuration.ConnectionFactory.CreateConnection())
             {
                 var dialect = SqlDialectFactory.For(connection);
-                var sql = "SELECT " + dialect.RenderMethod(method, dialect.QuoteForColumnName(nameof(ArticleByPublishedDate.PublishedDateTime))) + " FROM " + dialect.QuoteForTableName(nameof(ArticleByPublishedDate));
+                var sql = "SELECT " + dialect.RenderMethod(method, dialect.QuoteForColumnName(nameof(ArticleByPublishedDate.PublishedDateTime))) + " FROM " + dialect.QuoteForTableName(TablePrefix + nameof(ArticleByPublishedDate));
                 result = await connection.QueryFirstOrDefaultAsync<int>(sql);
             }
 
@@ -2639,6 +2733,24 @@ namespace YesSql.Tests
             using (var session = _store.CreateSession())
             {
                 Assert.Equal(oak.Id, (await session.Query<Tree>().FirstOrDefaultAsync()).Id);
+            }
+        }
+
+        [Fact]
+        public virtual async Task ShouldConvertDateTimeToUtc()
+        {
+            using (var session = _store.CreateSession())
+            {
+                session.Save(new Article { PublishedUtc = new DateTime(2013, 1, 21, 0, 0, 0, DateTimeKind.Local) });
+            }
+
+            using (var session = _store.CreateSession())
+            {
+                var article = await session.Query<Article>().FirstOrDefaultAsync();
+
+                Assert.NotNull(article);
+                Assert.Equal(DateTimeKind.Utc, article.PublishedUtc.Kind);
+                Assert.Equal(new DateTime(2013, 1, 21, 0, 0, 0, DateTimeKind.Local).ToUniversalTime(), article.PublishedUtc.ToUniversalTime());
             }
         }
     }
