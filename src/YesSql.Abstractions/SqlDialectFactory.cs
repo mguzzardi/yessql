@@ -1,6 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
-using System.Data;
+using System.Data.Common;
 
 namespace YesSql
 {
@@ -8,11 +8,16 @@ namespace YesSql
     {
         public static readonly ConcurrentDictionary<string, ISqlDialect> SqlDialects = new ConcurrentDictionary<string, ISqlDialect>();
 
-        public static ISqlDialect For(IDbConnection connection)
+        public static ISqlDialect For(DbConnection connection)
         {
-            string connectionName = connection.GetType().Name.ToLower();
+            return For(connection.GetType());
+        }
 
-            if (!SqlDialects.TryGetValue(connectionName, out ISqlDialect dialect))
+        public static ISqlDialect For(Type dbConnectionType)
+        {
+            var connectionName = dbConnectionType.Name.ToLower();
+
+            if (!SqlDialects.TryGetValue(connectionName, out var dialect))
             {
                 throw new ArgumentException("Unknown connection name: " + connectionName);
             }

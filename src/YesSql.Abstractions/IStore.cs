@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
@@ -15,18 +15,18 @@ namespace YesSql
         ISession CreateSession(IsolationLevel isolationLevel);
 
         /// <summary>
-        /// Registers the specified <see cref="IIndexProvider"/> instance.
+        /// Registers index providers.
         /// </summary>
-        /// <param name="indexProviders">The <see cref="IIndexProvider"/> to register.</param>
-        /// <returns>The current <see cref="IStore"/>.</returns>
-        IStore RegisterIndexes(params IIndexProvider[] indexProviders);
+        /// <param name="indexProviders">The index providers to register.</param>
+        /// <returns>The <see cref="IStore"/> instance.</returns>
+        IStore RegisterIndexes(IEnumerable<IIndexProvider> indexProviders);
 
-        IConfiguration Configuration { get; set; }
-        Task InitializeAsync();
+        IConfiguration Configuration { get; }
         Task InitializeCollectionAsync(string collection);
         IIdAccessor<int> GetIdAccessor(Type tContainer, string name);
-        int GetNextId(ISession session, string collection);
         IEnumerable<IndexDescriptor> Describe(Type target);
+        ISqlDialect Dialect { get; }
+        ITypeService TypeNames { get; }
     }
 
     public static class IStoreExtensions

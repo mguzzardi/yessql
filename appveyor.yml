@@ -1,4 +1,9 @@
 image: Visual Studio 2017
+skip_branch_with_pr: true
+branches:
+  only:
+    - master
+    - dev
 init:
   - git config --global core.autocrlf true
 services:
@@ -28,7 +33,6 @@ test_script:
   - dotnet test .\test\YesSql.Tests\YesSql.Tests.csproj --filter "FullyQualifiedName~YesSql.Tests.SqlServerTests" --configuration Release
   - dotnet test .\test\YesSql.Tests\YesSql.Tests.csproj --filter "FullyQualifiedName~YesSql.Tests.MySqlTests" --configuration Release
   - dotnet test .\test\YesSql.Tests\YesSql.Tests.csproj --filter "FullyQualifiedName~YesSql.Tests.SqliteTests" --configuration Release
-  - dotnet test .\test\YesSql.Tests\YesSql.Tests.csproj --filter "FullyQualifiedName~YesSql.Tests.InMemoryTests" --configuration Release
   - dotnet test .\test\YesSql.Tests\YesSql.Tests.csproj --filter "FullyQualifiedName~YesSql.Tests.PostgreSqlTests" --configuration Release
   - dotnet test .\test\YesSql.Tests\YesSql.Tests.csproj --filter "FullyQualifiedName~YesSql.Tests.ProviderTests" --configuration Release
 after_test:
@@ -39,8 +43,16 @@ artifacts:
 deploy:  
   - provider: NuGet
     on:
+      branch: dev
+    server: https://www.myget.org/F/yessql/api/v2/package
+    api_key:
+      secure: 7PQvuxXn5P39X5QDlDKWbNpOKJKivpqkq7umakIirAZ12CSTAiCwjtJhSBGVboPm
+    skip_symbols: true
+    artifact: /.*\.nupkg/
+  - provider: NuGet
+    on:
       branch: master
     server: https://www.nuget.org/api/v2/package
     api_key:
-      secure: EbFVaFfJ7tcKDP2vWGGXkXwOO/3M67hK29MV0gdzbH1zkWWviCv/0cbQZ7crDfUK
+      secure: 1W5p2uxA5pc/2pI0hkUkDbOukcM89CNTxENu8CKEAGFGtjJq1/2p+f0trkiipH6k
     skip_symbols: true

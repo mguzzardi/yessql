@@ -51,6 +51,7 @@ namespace YesSql.Provider.PostgreSql
         public override string IdentitySelectString => "RETURNING ";
         public override string IdentityColumnString => "SERIAL PRIMARY KEY";
         public override bool SupportsIfExistsBeforeTableName => true;
+        public override bool PrefixIndex => true;
 
         public override string GetTypeName(DbType dbType, int? length, byte precision, byte scale)
         {
@@ -136,11 +137,6 @@ namespace YesSql.Provider.PostgreSql
         public override string QuoteForTableName(string tableName)
         {
             return QuoteString + tableName + QuoteString;
-        }
-
-        protected override string Quote(string value)
-        {
-            return SingleQuoteString + value.Replace(SingleQuoteString, DoubleSingleQuoteString) + SingleQuoteString;
         }
 
         public override string CascadeConstraintsString => " cascade ";
