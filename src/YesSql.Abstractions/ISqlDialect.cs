@@ -38,6 +38,7 @@ namespace YesSql
         ISqlBuilder CreateBuilder(string tablePrefix);
         string RenderMethod(string name, params string[] args);
 
+        string QuoteForParameter(string v);
 
         string ParameterNamePrefix { get; }
         string ParameterPrefix { get; }
@@ -45,5 +46,10 @@ namespace YesSql
 
 
         string NullString { get; }
+
+
+        IDbCommand ConfigureCommand(IDbCommand command);
+        string InsertReturning(string insertSql, string table, string returnValue);
+
     }
 }

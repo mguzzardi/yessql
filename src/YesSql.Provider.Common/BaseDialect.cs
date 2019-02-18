@@ -190,12 +190,26 @@ namespace YesSql.Provider
             builder.Append(")");
         }
 
+        public string QuoteForParameter(string v)
+        {
+            return ParameterPrefix + ParameterNamePrefix + v;
+        }
+
         //parameters
         public virtual string ParameterNamePrefix => "@";
         public virtual string ParameterPrefix => "";
         public virtual string StatementEnd => ";";
 
         public virtual string NullString => String.Empty;
+
+        public virtual IDbCommand ConfigureCommand(IDbCommand command)
+        {
+            return command;
+        }
+        public virtual string InsertReturning(string insertSql, string table, string returnValue)
+        {
+            return insertSql + " " + IdentitySelectString + " " + QuoteForColumnName(returnValue);
+        }
 
     }
 }

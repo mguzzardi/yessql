@@ -24,7 +24,7 @@ namespace YesSql.Commands
 
         public virtual Task ExecuteAsync(DbConnection connection, DbTransaction transaction, ISqlDialect dialect)
         {
-            return connection.ExecuteAsync("delete from " + dialect.QuoteForTableName(_tablePrefix + _indexType.Name) + " where " + dialect.QuoteForColumnName("DocumentId") + " = @Id", new { Id = _documentId }, transaction);
+            return connection.ExecuteAsync("delete from " + dialect.QuoteForTableName(_tablePrefix + _indexType.Name) + " where " + dialect.QuoteForColumnName("DocumentId") + " = " + dialect.QuoteForParameter("Id"), new { Id = _documentId }, transaction);
         }
     }
 }

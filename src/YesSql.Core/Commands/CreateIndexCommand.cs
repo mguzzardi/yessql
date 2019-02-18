@@ -29,20 +29,22 @@ namespace YesSql.Commands
 
             if (Index is MapIndex)
             {
-                var sql = Inserts(type, dialect) + " " + dialect.IdentitySelectString + " " + dialect.QuoteForColumnName("Id");
+                //var sql = Inserts(type, dialect) + " " + dialect.IdentitySelectString + " " + dialect.QuoteForColumnName("Id");
+                var sql = dialect.InsertReturning(Inserts(type, dialect), dialect.QuoteForTableName(_tablePrefix + type.Name), "Id");
                 Index.Id = await connection.ExecuteScalarAsync<int>(sql, Index, transaction);
-                await connection.ExecuteAsync("update " + dialect.QuoteForTableName(_tablePrefix + type.Name) + " set " + dialect.QuoteForColumnName("DocumentId") + " = @mapid where " + dialect.QuoteForColumnName("Id") + " = @Id", new { mapid = Index.GetAddedDocuments().Single().Id, Id = Index.Id }, transaction);
+                await connection.ExecuteAsync("update " + dialect.QuoteForTableName(_tablePrefix + type.Name) + " set " + dialect.QuoteForColumnName("DocumentId") + " = " + dialect.QuoteForParameter("mapid") + " where " + dialect.QuoteForColumnName("Id") + " = " + dialect.QuoteForParameter("Id"), new { mapid = Index.GetAddedDocuments().Single().Id, Id = Index.Id }, transaction);
             }
             else
             {
                 var reduceIndex = Index as ReduceIndex;
 
-                var sql = Inserts(type, dialect) + " " + dialect.IdentitySelectString + " " + dialect.QuoteForColumnName("Id");
+                //var sql = Inserts(type, dialect) + " " + dialect.IdentitySelectString + " " + dialect.QuoteForColumnName("Id");
+                var sql = dialect.InsertReturning(Inserts(type, dialect), dialect.QuoteForTableName(_tablePrefix + type.Name), "Id");
                 Index.Id = await connection.ExecuteScalarAsync<int>(sql, Index, transaction);
 
                 var bridgeTableName = type.Name + "_" + documentTable;
                 var columnList = dialect.QuoteForColumnName(type.Name + "Id") +", " + dialect.QuoteForColumnName("DocumentId");
-                var bridgeSql = "insert into " + dialect.QuoteForTableName(_tablePrefix + bridgeTableName) + " (" + columnList + ") values (@Id, @DocumentId);";
+                var bridgeSql = "insert into " + dialect.QuoteForTableName(_tablePrefix + bridgeTableName) + " (" + columnList + ") values (" + dialect.QuoteForParameter("Id") + ", " + dialect.QuoteForParameter("DocumentId") + ")" + dialect.StatementEnd;
 
                 await connection.ExecuteAsync(bridgeSql, _addedDocumentIds.Select(x => new { DocumentId = x, Id = Index.Id }), transaction);
             }

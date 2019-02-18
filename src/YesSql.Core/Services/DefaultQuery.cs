@@ -379,7 +379,7 @@ namespace YesSql.Services
 
                         // Create a delegate that will be invoked every time a compiled query is reused,
                         // which will re-evaluate the current node, for the current parameter.
-                        var _parameterName = "@p" + _queryState._sqlBuilder.Parameters.Count.ToString();
+                        var _parameterName = _dialect.QuoteForParameter('p' + _queryState._sqlBuilder.Parameters.Count.ToString());
                         _queryState._parameterBindings.Add((o, sqlBuilder) => sqlBuilder.Parameters[_parameterName] = ((PropertyInfo)memberExpression.Member).GetValue(o));
 
                         value = ((FieldInfo)memberExpression.Member).GetValue(obj);
@@ -406,7 +406,7 @@ namespace YesSql.Services
 
                         // Create a delegate that will be invoked every time a compiled query is reused,
                         // which will re-evaluate the current node, for the current parameter.
-                        var _parameterName = "@p" + _queryState._sqlBuilder.Parameters.Count.ToString();
+                        var _parameterName = _dialect.QuoteForParameter('p' + _queryState._sqlBuilder.Parameters.Count.ToString());
                         _queryState._parameterBindings.Add((o, sqlBuilder) => sqlBuilder.Parameters[_parameterName] = ((PropertyInfo)memberExpression.Member).GetValue(o));
 
                         value = ((PropertyInfo)memberExpression.Member).GetValue(obj);
@@ -543,7 +543,7 @@ namespace YesSql.Services
                     builder.Append(_queryState._sqlBuilder.FormatColumn(_queryState._bound.Last().Name, memberExpression.Member.Name));
                     break;
                 case ExpressionType.Constant:
-                    _queryState._lastParameterName = "@p" + _queryState._sqlBuilder.Parameters.Count.ToString();
+                    _queryState._lastParameterName = _dialect.QuoteForParameter('p' + _queryState._sqlBuilder.Parameters.Count.ToString());
                     _queryState._sqlBuilder.Parameters.Add(_queryState._lastParameterName, ((ConstantExpression)expression).Value);
                     builder.Append(_queryState._lastParameterName);
                     break;
@@ -810,8 +810,8 @@ namespace YesSql.Services
 
             if (filterType)
             {
-                _queryState._sqlBuilder.WhereAlso(_queryState._sqlBuilder.FormatColumn(_queryState._documentTable, "Type") + " = @Type"); // TODO: investigate, this makes the query 3 times slower on sqlite
-                _queryState._sqlBuilder.Parameters["@Type"] = _session.Store.TypeNames[typeof(T)];
+                _queryState._sqlBuilder.WhereAlso(_queryState._sqlBuilder.FormatColumn(_queryState._documentTable, "Type") + " = " + _dialect.QuoteForParameter("Type")); // TODO: investigate, this makes the query 3 times slower on sqlite
+                _queryState._sqlBuilder.Parameters[_dialect.QuoteForParameter("Type")] = _session.Store.TypeNames[typeof(T)];
             }
 
             return new Query<T>(this);
@@ -970,7 +970,7 @@ namespace YesSql.Services
             {
                 if (!_query._queryState._sqlBuilder.HasOrder)
                 {
-                    _query._queryState._sqlBuilder.OrderBy(_query._dialect.QuoteForColumnName("Id"));
+                    _query._queryState._sqlBuilder.OrderBy(_query._dialect.QuoteForTableName(_query._session._store.Configuration.TablePrefix + _query._queryState._documentTable) +"."+_query._dialect.QuoteForColumnName("Id"));
                 }
 
                 _query._queryState._sqlBuilder.Take(count.ToString());

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text;
 
 namespace YesSql.Collections
@@ -65,7 +65,7 @@ namespace YesSql.Collections
 
         public override string GetSafeName()
         {
-            return "";
+            return String.Empty;
         }
     }
 

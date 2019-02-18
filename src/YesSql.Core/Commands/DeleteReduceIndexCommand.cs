@@ -20,11 +20,11 @@ namespace YesSql.Commands
 
             var documentTable = CollectionHelper.Current.GetPrefixedName(Store.DocumentTable);
             var bridgeTableName = name + "_" + documentTable;
-            var bridgeSql = "delete from " + dialect.QuoteForTableName(_tablePrefix + bridgeTableName) +" where " + dialect.QuoteForColumnName(name + "Id") + " = @Id";
+            var bridgeSql = "delete from " + dialect.QuoteForTableName(_tablePrefix + bridgeTableName) +" where " + dialect.QuoteForColumnName(name + "Id") + " = " + dialect.QuoteForParameter("Id") ;
 
             await connection.ExecuteAsync(bridgeSql, new { Id = Index.Id }, transaction);
 
-            await connection.ExecuteAsync("delete from " + dialect.QuoteForTableName(_tablePrefix + name) + " where " + dialect.QuoteForColumnName("Id") + " = @Id", new { Id = Index.Id }, transaction);
+            await connection.ExecuteAsync("delete from " + dialect.QuoteForTableName(_tablePrefix + name) + " where " + dialect.QuoteForColumnName("Id") + " = " + dialect.QuoteForParameter("Id"), new { Id = Index.Id }, transaction);
         }
     }
 }

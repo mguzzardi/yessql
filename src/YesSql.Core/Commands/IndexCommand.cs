@@ -74,7 +74,7 @@ namespace YesSql.Commands
                     for (var i = 0; i < allProperties.Count(); i++)
                     {
                         var property = allProperties.ElementAt(i);
-                        sbParameterList.Append("@" + property.Name);
+                        sbParameterList.Append(dialect.QuoteForParameter(property.Name));
                         if (i < allProperties.Count() - 1)
                             sbParameterList.Append(", ");
                     }
@@ -98,12 +98,13 @@ namespace YesSql.Commands
                 for (var i = 0; i < allProperties.Length; i++)
                 {
                     var property = allProperties[i];
-                    values.Append(dialect.QuoteForColumnName(property.Name) + " = @" + property.Name);
+                    values.Append(dialect.QuoteForColumnName(property.Name) + " = " + dialect.QuoteForParameter(property.Name));
                     if (i < allProperties.Length - 1)
                         values.Append(", ");
                 }
 
-                UpdatesList[type.FullName] = result = "UPDATE " + dialect.QuoteForTableName(_tablePrefix + type.Name) + " SET " + values + " WHERE " + dialect.QuoteForColumnName("Id") + " = @Id;";
+                UpdatesList[type.FullName] = result = "UPDATE " + dialect.QuoteForTableName(_tablePrefix + type.Name) + " SET " + values + " WHERE " + dialect.QuoteForColumnName("Id") + " = " + dialect.QuoteForParameter("Id") + " " + dialect.StatementEnd;
+
             }
 
             return String.Format(result, _tablePrefix);

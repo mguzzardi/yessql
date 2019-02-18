@@ -1,11 +1,6 @@
+using Oracle.ManagedDataAccess.Client;
 using System;
 using System.Data;
-#if RUN_DOTNET451
-using Oracle.ManagedDataAccess.Client;
-#endif
-#if RUN_NETSTANDARD
-using Devart.Data.Oracle;
-#endif
 
 
 namespace YesSql.Provider.Oracle

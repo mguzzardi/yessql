@@ -287,7 +287,7 @@ namespace YesSql.Tests
 
             using (var session = _store.CreateSession())
             {
-                var person = await session.QueryIndex<PersonByName>().Where(d => d.QuoteForColumnName(nameof(PersonByName.SomeName)) + " = @Name").WithParameter("Name", "Bill").FirstOrDefaultAsync();
+                var person = await session.QueryIndex<PersonByName>().Where(d => d.QuoteForColumnName(nameof(PersonByName.SomeName)) + " = " + d.QuoteForParameter("Name")).WithParameter("Name", "Bill").FirstOrDefaultAsync();
 
                 Assert.NotNull(person);
                 Assert.Equal("Bill", (string)person.SomeName);
@@ -405,7 +405,7 @@ namespace YesSql.Tests
 
             using (var session = _store.CreateSession())
             {
-                var person = await session.Query<Person, PersonByName>().Where(d => d.QuoteForColumnName(nameof(PersonByName.SomeName)) + " = @Name").WithParameter("Name", "Bill").FirstOrDefaultAsync();
+                var person = await session.Query<Person, PersonByName>().Where(d => d.QuoteForColumnName(nameof(PersonByName.SomeName)) + " = " + d.QuoteForParameter("Name")).WithParameter("Name", "Bill").FirstOrDefaultAsync();
 
                 Assert.NotNull(person);
                 Assert.Equal("Bill", (string)person.Firstname);

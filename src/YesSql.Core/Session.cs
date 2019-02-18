@@ -244,7 +244,7 @@ namespace YesSql
 
             var documentTable = CollectionHelper.Current.GetPrefixedName(YesSql.Store.DocumentTable);
 
-            var command = "select * from " + _dialect.QuoteForTableName(_tablePrefix + documentTable) + " where " + _dialect.QuoteForColumnName("Id") + " = @Id";
+            var command = "select * from " + _dialect.QuoteForTableName(_tablePrefix + documentTable) + " where " + _dialect.QuoteForColumnName("Id") + " = " + _dialect.QuoteForParameter("Id");
             var key = new WorkerQueryKey(nameof(GetDocumentByIdAsync), new [] { id });
             var result = await _store.ProduceAsync(key, () => _connection.QueryAsync<Document>(command, new { Id = id }, _transaction));
 
@@ -312,7 +312,7 @@ namespace YesSql
             await DemandAsync();
 
             var documentTable = CollectionHelper.Current.GetPrefixedName(YesSql.Store.DocumentTable);
-            var command = "select * from " + _dialect.QuoteForTableName(_tablePrefix + documentTable) + " where " + _dialect.QuoteForColumnName("Id") + " " + _dialect.InOperator("@Ids");
+            var command = "select * from " + _dialect.QuoteForTableName(_tablePrefix + documentTable) + " where " + _dialect.QuoteForColumnName("Id") + " " + _dialect.InOperator(_dialect.QuoteForParameter("Ids"));
 
             var key = new WorkerQueryKey(nameof(GetAsync), ids);
             var documents = await _store.ProduceAsync(key, () =>
@@ -711,7 +711,7 @@ namespace YesSql
             await DemandAsync();
 
             var name = _tablePrefix + descriptor.IndexType.Name;
-            var sql = "select * from " + _dialect.QuoteForTableName(name) + " where " + _dialect.QuoteForColumnName(descriptor.GroupKey.Name) + " = @currentKey";
+            var sql = "select * from " + _dialect.QuoteForTableName(name) + " where " + _dialect.QuoteForColumnName(descriptor.GroupKey.Name) + " = " + _dialect.QuoteForParameter("currentKey");
 
             var index = await _connection.QueryAsync(descriptor.IndexType, sql, new { currentKey }, _transaction);
             return index.FirstOrDefault() as ReduceIndex;

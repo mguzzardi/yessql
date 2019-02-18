@@ -1,3 +1,4 @@
+using Oracle.ManagedDataAccess.Client;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -114,6 +115,18 @@ namespace YesSql.Provider.Oracle
                 sqlBuilder.Trail(" ROWS ONLY");
             }
         }
+        public override string InOperator(string values)
+        {
+            // return " IN (" + values + ") ";
+            //only Oracle 12c
+            return " IN (WITH cte AS(SELECT " + values + " mlist FROM dual) " +
+                 " SELECT s.p "+
+                 "  FROM cte t " +
+                 " OUTER apply(SELECT TRIM(p) AS p "+
+                 @"                FROM json_table(REPLACE(json_array(t.mlist), ',', '"",""'), " +
+                 @"                                '$[*]' columns(p VARCHAR2(4000) path '$'))) s" +
+                ")";
+        }
 
         public override string QuoteForColumnName(string columnName)
         {
@@ -141,7 +154,7 @@ namespace YesSql.Provider.Oracle
         {
             if (value == null)
             {
-                return "null";
+                return NullString;
             }
 
             switch (Convert.GetTypeCode(value))
@@ -152,11 +165,32 @@ namespace YesSql.Provider.Oracle
                     return base.GetSqlValue(value);
             }
         }
-
+        
         public override string NullString => "null";
         public override string ParameterNamePrefix => "";
         public override string ParameterPrefix => ":";
         public override string StatementEnd => "";
 
+        public override IDbCommand ConfigureCommand(IDbCommand command)
+        {
+            var oracleCommand = (OracleCommand)command;
+            oracleCommand.BindByName = true;
+            return oracleCommand;
+        }
+
+        public override string InsertReturning(string insertSql, string table, string returnValue)
+        {
+            string plsql = " DECLARE " +
+                           " insertRowid VARCHAR2(255); " +
+                           " l_cursor_1 SYS_REFCURSOR; " +
+                           " BEGIN " +
+                           insertSql +
+                           " RETURNING rowid INTO insertRowid; " +
+                           " OPEN l_cursor_1 FOR SELECT " + QuoteForColumnName(returnValue) + " FROM " + table + " WHERE ROWID = insertRowid;" +
+                           " DBMS_SQL.RETURN_RESULT(l_cursor_1); " +
+                           " END; ";
+            //string plsql = insertSql + " RETURNING " + QuoteForColumnName(returnValue) + " INTO :" + returnValue ;
+            return plsql;
+        }
     }
 }
