@@ -18,9 +18,4 @@
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
       <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="2.18.3" />
   </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
-    <PackageReference Include="Devart.Data.Oracle">
-      <Version>9.6.675</Version>
-    </PackageReference>
-  </ItemGroup>
 </Project>
